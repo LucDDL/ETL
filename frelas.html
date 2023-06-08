@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Painel de Eventos</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.3/css/bulma.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css">
+    <style>
+         /* Estilizar a barra de rolagem */
+                ::-webkit-scrollbar {width: 8px; background: linear-gradient(to bottom, #1a0837, #4d2675, #f2f2f2);}
+                ::-webkit-scrollbar-thumb { background: #1a0837; border-radius: 4px;}
+                ::-webkit-scrollbar-thumb:hover { background: linear-gradient(to bottom, #1a0837, #4d2675, #f2f2f2);}
+
+                /* Estilos gerais da página */
+                html {
+                    margin-top: 0px;
+                }
+                body {
+                    background-color: #ffffff;
+                    height: 100vh;
+                    margin: 0;
+                }
+        .file-input {
+            color: white;
+        }
+        .card {
+            margin-top: 0px;
+            background-color: rgba(255, 253, 253, 0.7);
+        }
+        .container {
+            margin-top: 0px;
+            padding: 20px;
+            
+        }
+        .card-header-title {
+            background: linear-gradient(to bottom, #1a0837, #4d2675, #f2f2f2);
+            color: black;
+            padding: 10px;
+            font-weight: bold;
+        }
+        .table-container {
+            margin-top: 50px;
+            min-height: 400px; /* Definir altura mínima para a tabela */
+        }
+        .filter-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            width: 100%;
+            padding: 0.5rem;
+            font-size: 1rem;
+        }
+        .filter-button i {
+            margin-right: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <header class="card-header">
+                <p class="card-header-title">
+                   <strong style="color: rgb(3, 252, 194);"> BASE FREELAS💰</strong>
+                </p>
+            </header>
+            <div class="card-content">
+                <div class="file is-primary has-name">
+                    <label class="file-label">
+                        <input class="file-input" type="file" id="jsonfile" name="jsonfile">
+                        <span class="file-cta">
+                            <span class="file-icon">
+                                <i class="fas fa-upload"></i>
+                            </span>
+                            <span class="file-label">
+                                Escolher arquivo...
+                            </span>
+                        </span>
+                        <span class="file-name">
+                            Nenhum arquivo selecionado
+                        </span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="card" style="margin-top: 25px;">
+            <header class="card-header">
+                <p class="card-header-title">
+                    <strong style="color: rgb(3, 252, 194);">PUBLICO ESTIMADO POR DIA DA SEMANA🎤🎶</strong>
+                </p>
+            </header>
+            <div class="card-content">
+                <canvas id="chart"></canvas>
+            </div>
+        </div>
+    
+        <div class="card" style="margin-top: 25px;">
+            <div class="card-content">
+                <div class="columns">
+                    <div class="column is-4">
+                        <div class="field">
+                            <label class="label">Data de Início</label>
+                            <div class="control has-icons-left">
+                                <input class="input" type="date" id="startDateFilter">
+                                <span class="icon is-small is-left">
+                                    <i class="fas fa-calendar"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="column is-4">
+                        <div class="field">
+                            <label class="label">Data de Término</label>
+                            <div class="control has-icons-left">
+                                <input class="input" type="date" id="endDateFilter">
+                                <span class="icon is-small is-left">
+                                    <i class="fas fa-calendar"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="column is-4">
+                        <div class="field">
+                            <label class="label">&nbsp;</label>
+                            <div class="control">
+                                <button class="button is-primary" onclick="applyDateFilter()">
+                                    <span class="icon">
+                                        <i class="fas fa-filter"></i>
+                                    </span>
+                                </button>
+                                <button class="button is-danger" onclick="resetFilter()">
+                                    <span class="icon">
+                                        <i class="fas fa-trash"></i>
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="table is-striped is-fullwidth">
+                        <thead>
+                            <tr>
+                                <th>Negócio</th>
+                                <th>Data de Início</th>
+                                <th>Data de Término</th>
+                                <th>Nome do Evento</th>
+                                <th>Valor</th>
+                                <th>Público estimado por dia</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.8.14/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.8.14/locale/pt.js"></script>
+    <script>
+        // Definir o locale para português
+        dayjs.locale('pt');
+        const weekdays = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+    
+        let data = []; // Armazenar os dados
+    
+        document.getElementById('jsonfile').addEventListener('change', function() {
+            let fr = new FileReader();
+            fr.onload = function() {
+                data = JSON.parse(fr.result);
+                createTable(data);
+                createChart(data);
+                // Armazenar os dados no localStorage
+                localStorage.setItem('eventData', JSON.stringify(data));
+            }
+            fr.readAsText(this.files[0]);
+        });
+    
+        function createTable(data) {
+            let tableBody = '';
+            for (let item of data) {
+                const negocioId = item.url.split('/').pop(); // Extrair o ID do negócio do link
+                tableBody += `<tr>
+                    <td><button class="button is-rounded" onclick="openLink('${item.url}', '${negocioId}')"><span class="badge">${negocioId}</span></button></td>
+                    <td>${item.dt_inicio_evento}</td>
+                    <td>${item.dt_fim_evento}</td>
+                    <td>${item.nome_evento}</td>
+                    <td>${item.valor}</td>
+                    <td>${item.publico_estimado_por_dia}</td>
+                </tr>`;
+            }
+            document.getElementById('tableBody').innerHTML = tableBody;
+        }
+    
+        function createChart(data) {
+            const weekDaysData = weekdays.map(day => ({
+                day,
+                total: data.filter(item => dayjs(item.dt_inicio_evento).format('dddd') === day).reduce((prev, curr) => prev + curr.publico_estimado_por_dia, 0)
+            }));
+            
+            var ctx = document.getElementById('chart').getContext('2d');
+            var chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: weekDaysData.map(item => item.day),
+                    datasets: [{
+                        label: 'Público Estimado',
+                        data: weekDaysData.map(item => item.total),
+                        backgroundColor: [
+                            'rgba(67, 34, 94, 1)',
+                            'rgba(99, 61, 128, 1)',
+                            'rgba(131, 88, 162, 1)',
+                            'rgba(163, 115, 195, 1)',
+                            'rgba(195, 142, 229, 1)',
+                            'rgba(227, 169, 162, 1)',
+                            'rgba(255, 196, 255, 1)'
+                        ],
+                        borderColor: [
+                            'rgba(67, 34, 94, 1)',
+                            'rgba(99, 61, 128, 1)',
+                            'rgba(131, 88, 162, 1)',
+                            'rgba(163, 115, 195, 1)',
+                            'rgba(195, 142, 229, 1)',
+                            'rgba(227, 169, 162, 1)',
+                            'rgba(255, 196, 255, 1)'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    
+        function openLink(url, id) {
+            window.open(url, `_negocio${id}`);
+        }
+    
+        function applyDateFilter() {
+            const startDate = document.getElementById('startDateFilter').value;
+            const endDate = document.getElementById('endDateFilter').value;
+    
+            // Aplicar filtro de data
+            let filteredData = data.filter(item => item.dt_inicio_evento >= startDate && item.dt_fim_evento <= endDate);
+    
+            // Criar a tabela com os dados filtrados
+            createTable(filteredData);
+        }
+    
+        function resetFilter() {
+            // Limpar os campos de data
+            document.getElementById('startDateFilter').value = '';
+            document.getElementById('endDateFilter').value = '';
+    
+            // Mostrar todos os dados novamente
+            createTable(data);
+        }
+    
+        // Verificar se há dados armazenados no localStorage
+        const storedData = localStorage.getItem('eventData');
+        if (storedData) {
+            data = JSON.parse(storedData);
+            createTable(data);
+            createChart(data);
+        }
+    </script>
+
+</body>
+</html>
